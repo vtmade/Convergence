@@ -7,7 +7,12 @@ const state = {
   minArea: 0,
   nodes: [],
   connections: [],
-  spokesCount: 100
+  spokesCount: 100,
+  time: 0,
+  animationSpeed: 0.002,
+  centerX: 0,
+  centerY: 0,
+  scale: 1
 };
 
 function preload() {
@@ -28,20 +33,25 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(1100, 1100);
+  createCanvas(windowWidth, windowHeight);
   pixelDensity(1);
   background(10, 20, 30);
   colorMode(RGB, 255, 255, 255, 1);
-  noLoop();
+  
+  state.centerX = width / 2;
+  state.centerY = height / 2;
+  state.scale = min(width, height) / 1100;
   
   generateNodes();
   generateSpokes();
   generateConnections();
+  
+  loop();
 }
 
 function generateNodes() {
   // Create multiple layers of nodes for a broader ring
-  let baseRadii = [250, 300, 350]; // Multiple base radii for broader distribution
+  let baseRadii = [250 * state.scale, 300 * state.scale, 350 * state.scale]; // Multiple base radii for broader distribution
   
   // Primary data nodes in multiple circular layers
   for (let i = 0; i < state.communityData.length; i++) {
@@ -49,15 +59,15 @@ function generateNodes() {
     let angle = map(i, 0, state.communityData.length, 0, TWO_PI);
     
     // Add more random variation to make it more organic
-    let radiusVariation = random(-50, 50);
+    let radiusVariation = random(-50 * state.scale, 50 * state.scale);
     let angleVariation = random(-0.1, 0.1);
     
-    let x = width/2 + cos(angle + angleVariation) * (baseRadius + radiusVariation);
-    let y = height/2 + sin(angle + angleVariation) * (baseRadius + radiusVariation);
+    let x = state.centerX + cos(angle + angleVariation) * (baseRadius + radiusVariation);
+    let y = state.centerY + sin(angle + angleVariation) * (baseRadius + radiusVariation);
     
     let population = state.communityData[i].population;
     let area = state.communityData[i].area;
-    let nodeSize = map(population, state.minPop, state.maxPop, 2, 8);
+    let nodeSize = map(population, state.minPop, state.maxPop, 2 * state.scale, 8 * state.scale);
     
     // Determine color based on area with more variation
     let colorRatio = map(area, state.minArea, state.maxArea, 0, 1);
@@ -73,30 +83,39 @@ function generateNodes() {
         r: lerp(50, 255, colorRatio),
         b: lerp(255, 50, colorRatio),
         alpha: random(0.7, 0.9)
-      }
+      },
+      originalX: x,
+      originalY: y,
+      phase: random(TWO_PI)
     });
   }
   
   // Add more secondary nodes with broader distribution
   for (let i = 0; i < 300; i++) {
     let angle = random(TWO_PI);
-    let radius = random(200, 500);
+    let radius = random(200 * state.scale, 500 * state.scale);
     
     // Add some clustering tendency
     if (random() < 0.7) {
-      radius = random(230, 420);
+      radius = random(230 * state.scale, 420 * state.scale);
     }
     
+    let x = state.centerX + cos(angle) * radius;
+    let y = state.centerY + sin(angle) * radius;
+    
     state.nodes.push({
-      x: width/2 + cos(angle) * radius,
-      y: height/2 + sin(angle) * radius,
-      size: random(0.5, 2),
+      x: x,
+      y: y,
+      size: random(0.5 * state.scale, 2 * state.scale),
       isData: false,
       color: {
         r: random(50, 150),
         b: random(150, 255),
         alpha: random(0.4, 0.7)
-      }
+      },
+      originalX: x,
+      originalY: y,
+      phase: random(TWO_PI)
     });
   }
 }
@@ -105,36 +124,38 @@ function generateSpokes() {
   // Add varied radial spokes
   for (let i = 0; i < state.spokesCount; i++) {
     let angle = map(i, 0, state.spokesCount, 0, TWO_PI) + random(-0.02, 0.02);
-    let innerRadius = random(180, 280);
-    let outerRadius = random(380, 550);
+    let innerRadius = random(180 * state.scale, 280 * state.scale);
+    let outerRadius = random(380 * state.scale, 550 * state.scale);
     
     // Add some curved spokes for organic feel
     if (random() < 0.3) {
       state.connections.push({
         type: 'curved-spoke',
-        x1: width/2 + cos(angle) * innerRadius,
-        y1: height/2 + sin(angle) * innerRadius,
-        x2: width/2 + cos(angle) * outerRadius,
-        y2: height/2 + sin(angle) * outerRadius,
+        x1: state.centerX + cos(angle) * innerRadius,
+        y1: state.centerY + sin(angle) * innerRadius,
+        x2: state.centerX + cos(angle) * outerRadius,
+        y2: state.centerY + sin(angle) * outerRadius,
         ctrl: random(0.1, 0.3),
         color: {
           r: random(50, 200),
           b: random(150, 255),
           alpha: random(0.08, 0.2)
-        }
+        },
+        phase: random(TWO_PI)
       });
     } else {
       state.connections.push({
         type: 'spoke',
-        x1: width/2 + cos(angle) * innerRadius,
-        y1: height/2 + sin(angle) * innerRadius,
-        x2: width/2 + cos(angle) * outerRadius,
-        y2: height/2 + sin(angle) * outerRadius,
+        x1: state.centerX + cos(angle) * innerRadius,
+        y1: state.centerY + sin(angle) * innerRadius,
+        x2: state.centerX + cos(angle) * outerRadius,
+        y2: state.centerY + sin(angle) * outerRadius,
         color: {
           r: random(50, 200),
           b: random(150, 255),
           alpha: random(0.08, 0.2)
-        }
+        },
+        phase: random(TWO_PI)
       });
     }
   }
@@ -144,7 +165,7 @@ function generateConnections() {
   for (let i = 0; i < state.nodes.length; i++) {
     for (let j = i + 1; j < state.nodes.length; j++) {
       let d = dist(state.nodes[i].x, state.nodes[i].y, state.nodes[j].x, state.nodes[j].y);
-      if (d < 180) {
+      if (d < 180 * state.scale) {
         let colorMix = {
           r: (state.nodes[i].color.r + state.nodes[j].color.r) / 2,
           b: (state.nodes[i].color.b + state.nodes[j].color.b) / 2,
@@ -155,7 +176,7 @@ function generateConnections() {
           type: 'connection',
           from: i,
           to: j,
-          weight: map(d, 0, 180, 1.2, 0.1),
+          weight: map(d, 0, 180 * state.scale, 1.2 * state.scale, 0.1 * state.scale),
           color: colorMix
         });
       }
@@ -164,14 +185,26 @@ function generateConnections() {
 }
 
 function draw() {
-  background(10, 20, 30);
+  background(10, 20, 30, 0.05);
+  
+  state.time += state.animationSpeed;
+  
+  // Update node positions with slow motion
+  state.nodes.forEach(node => {
+    let drift = sin(state.time + node.phase) * 2;
+    let driftY = cos(state.time * 0.7 + node.phase) * 1.5;
+    node.x = node.originalX + drift;
+    node.y = node.originalY + driftY;
+  });
   
   // Draw spokes with more organic feel
   blendMode(ADD);
   state.connections.forEach(conn => {
     if (conn.type === 'spoke' || conn.type === 'curved-spoke') {
       stroke(conn.color.r, 0, conn.color.b, conn.color.alpha);
-      strokeWeight(random(0.3, 2));
+      let pulseAlpha = conn.color.alpha * (1 + sin(state.time * 2 + (conn.phase || 0)) * 0.3);
+      stroke(conn.color.r, 0, conn.color.b, pulseAlpha);
+      strokeWeight(random(0.3 * state.scale, 2 * state.scale));
       
       if (conn.type === 'curved-spoke') {
         let midX = (conn.x1 + conn.x2) / 2 + random(-20, 20);
@@ -194,7 +227,8 @@ function draw() {
       let to = state.nodes[conn.to];
       
       stroke(conn.color.r, 0, conn.color.b, conn.color.alpha);
-      strokeWeight(conn.weight);
+      let pulseWeight = conn.weight * (1 + sin(state.time + conn.from + conn.to) * 0.2);
+      strokeWeight(pulseWeight);
       
       if (random() < 0.3) {
         let mid = createVector(
@@ -229,10 +263,14 @@ function draw() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  
+  state.centerX = width / 2;
+  state.centerY = height / 2;
+  state.scale = min(width, height) / 1100;
+  
   state.nodes = [];
   state.connections = [];
   generateNodes();
   generateSpokes();
   generateConnections();
-  redraw();
 }
