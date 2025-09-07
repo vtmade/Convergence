@@ -1,4 +1,4 @@
-# Population Flows
+# Community Blossom
 
 *Community data rendered as visual form*
 

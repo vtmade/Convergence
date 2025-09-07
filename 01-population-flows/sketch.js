@@ -183,7 +183,7 @@ function drawVisualization() {
   fill(200);
   textAlign(LEFT);
   textSize(16 * state.scale);
-  text("Population Flows", 20, 30);
+  text("Community Blossom", 20, 30);
   
   textSize(12 * state.scale);
   fill(150);
