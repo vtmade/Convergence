@@ -11,35 +11,70 @@ const state = {
   particles: [],
   spokesCount: 80,
   time: 0,
-  animationSpeed: 0.01,
+  animationSpeed: 0.008,
   centerX: 0,
   centerY: 0,
   scale: 1,
-  colorPalette: []
+  colorPalette: [],
+  dataLoaded: false
 };
 
 function preload() {
-  loadTable('Dubai2.csv', 'csv', 'header', (table) => {
-    for (let row of table.rows) {
-      state.communityData.push({
-        code: row.get('Code'),
-        population: parseInt(row.get('Population')),
-        area: parseFloat(row.get('Area'))
-      });
-    }
-    
-    state.maxPop = Math.max(...state.communityData.map(d => d.population));
-    state.minPop = Math.min(...state.communityData.map(d => d.population));
-    state.maxArea = Math.max(...state.communityData.map(d => d.area));
-    state.minArea = Math.min(...state.communityData.map(d => d.area));
-  });
+  // Try to load CSV, but don't fail if it doesn't exist
+  try {
+    loadTable('Dubai2.csv', 'csv', 'header', (table) => {
+      if (table && table.rows && table.rows.length > 0) {
+        for (let row of table.rows) {
+          let pop = parseInt(row.get('Population'));
+          let area = parseFloat(row.get('Area'));
+          if (!isNaN(pop) && !isNaN(area)) {
+            state.communityData.push({
+              code: row.get('Code'),
+              population: pop,
+              area: area
+            });
+          }
+        }
+        
+        if (state.communityData.length > 0) {
+          state.maxPop = Math.max(...state.communityData.map(d => d.population));
+          state.minPop = Math.min(...state.communityData.map(d => d.population));
+          state.maxArea = Math.max(...state.communityData.map(d => d.area));
+          state.minArea = Math.min(...state.communityData.map(d => d.area));
+          state.dataLoaded = true;
+        }
+      }
+    }, () => {
+      // If CSV fails to load, create synthetic data
+      console.log('CSV not found, generating synthetic data');
+      generateSyntheticData();
+    });
+  } catch(e) {
+    console.log('Error loading CSV, generating synthetic data');
+    generateSyntheticData();
+  }
+}
+
+function generateSyntheticData() {
+  // Create synthetic community data if CSV doesn't load
+  for (let i = 0; i < 50; i++) {
+    state.communityData.push({
+      code: `C${i}`,
+      population: Math.floor(random(1000, 50000)),
+      area: random(10, 500)
+    });
+  }
+  
+  state.maxPop = Math.max(...state.communityData.map(d => d.population));
+  state.minPop = Math.min(...state.communityData.map(d => d.population));
+  state.maxArea = Math.max(...state.communityData.map(d => d.area));
+  state.minArea = Math.min(...state.communityData.map(d => d.area));
+  state.dataLoaded = true;
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   pixelDensity(1);
-  background(8, 12, 18);
-  colorMode(HSB, 360, 100, 100, 1);
   
   state.centerX = width / 2;
   state.centerY = height / 2;
@@ -55,6 +90,14 @@ function setup() {
     {h: 300, s: 70, b: 75}, // Magenta
   ];
   
+  // If data isn't loaded yet, generate synthetic data
+  if (state.communityData.length === 0) {
+    generateSyntheticData();
+  }
+  
+  colorMode(HSB, 360, 100, 100, 1);
+  background(8, 12, 18);
+  
   generateNodes();
   generateFlowingLines();
   generateParticles();
@@ -65,17 +108,22 @@ function setup() {
 function generateNodes() {
   state.nodes = [];
   
+  // Ensure we have data
+  if (state.communityData.length === 0) {
+    generateSyntheticData();
+  }
+  
   // Create organic spiral distribution
   for (let i = 0; i < state.communityData.length; i++) {
-    let spiralT = map(i, 0, state.communityData.length, 0, 6 * PI);
-    let spiralRadius = map(i, 0, state.communityData.length, 100 * state.scale, 400 * state.scale);
+    let spiralT = map(i, 0, state.communityData.length, 0, 4 * PI);
+    let spiralRadius = map(i, 0, state.communityData.length, 80 * state.scale, 350 * state.scale);
     
-    let x = state.centerX + cos(spiralT) * (spiralRadius + sin(spiralT * 2) * 50 * state.scale);
-    let y = state.centerY + sin(spiralT) * (spiralRadius + cos(spiralT * 1.5) * 40 * state.scale);
+    let x = state.centerX + cos(spiralT) * (spiralRadius + sin(spiralT * 2) * 30 * state.scale);
+    let y = state.centerY + sin(spiralT) * (spiralRadius + cos(spiralT * 1.5) * 25 * state.scale);
     
     let population = state.communityData[i].population;
     let area = state.communityData[i].area;
-    let nodeSize = map(population, state.minPop, state.maxPop, 3 * state.scale, 12 * state.scale);
+    let nodeSize = map(population, state.minPop, state.maxPop, 2 * state.scale, 8 * state.scale);
     
     let colorIndex = floor(map(area, state.minArea, state.maxArea, 0, state.colorPalette.length));
     colorIndex = constrain(colorIndex, 0, state.colorPalette.length - 1);
@@ -90,15 +138,15 @@ function generateNodes() {
       originalY: y,
       phase: random(TWO_PI),
       pulsePhase: random(TWO_PI),
-      orbitRadius: random(5, 15) * state.scale,
-      orbitSpeed: random(0.5, 2)
+      orbitRadius: random(3, 10) * state.scale,
+      orbitSpeed: random(0.3, 1.5)
     });
   }
   
   // Add flowing secondary nodes
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 120; i++) {
     let angle = random(TWO_PI);
-    let radius = random(150 * state.scale, 500 * state.scale);
+    let radius = random(100 * state.scale, 400 * state.scale);
     
     let x = state.centerX + cos(angle) * radius;
     let y = state.centerY + sin(angle) * radius;
@@ -108,15 +156,15 @@ function generateNodes() {
     state.nodes.push({
       x: x,
       y: y,
-      size: random(1 * state.scale, 4 * state.scale),
+      size: random(1 * state.scale, 3 * state.scale),
       isData: false,
       color: state.colorPalette[colorIndex],
       originalX: x,
       originalY: y,
       phase: random(TWO_PI),
       pulsePhase: random(TWO_PI),
-      orbitRadius: random(3, 8) * state.scale,
-      orbitSpeed: random(0.3, 1.5)
+      orbitRadius: random(2, 6) * state.scale,
+      orbitSpeed: random(0.2, 1.2)
     });
   }
 }
@@ -125,10 +173,10 @@ function generateFlowingLines() {
   state.flowingLines = [];
   
   // Create flowing radial lines
-  for (let i = 0; i < 60; i++) {
-    let angle = map(i, 0, 60, 0, TWO_PI);
-    let innerR = 80 * state.scale;
-    let outerR = 600 * state.scale;
+  for (let i = 0; i < 48; i++) {
+    let angle = map(i, 0, 48, 0, TWO_PI);
+    let innerR = 60 * state.scale;
+    let outerR = 450 * state.scale;
     
     let colorIndex = floor(random(state.colorPalette.length));
     
@@ -139,24 +187,24 @@ function generateFlowingLines() {
       outerRadius: outerR,
       color: state.colorPalette[colorIndex],
       phase: random(TWO_PI),
-      flowSpeed: random(0.5, 2),
-      waveLength: random(50, 150) * state.scale,
-      amplitude: random(10, 30) * state.scale
+      flowSpeed: random(0.3, 1.5),
+      waveLength: random(40, 120) * state.scale,
+      amplitude: random(8, 25) * state.scale
     });
   }
   
   // Create spiral flowing lines
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 6; i++) {
     let colorIndex = floor(random(state.colorPalette.length));
     
     state.flowingLines.push({
       type: 'spiral',
-      spiralTightness: random(0.1, 0.3),
-      maxRadius: random(300, 500) * state.scale,
+      spiralTightness: random(0.1, 0.25),
+      maxRadius: random(250, 400) * state.scale,
       color: state.colorPalette[colorIndex],
       phase: random(TWO_PI),
-      flowSpeed: random(0.3, 1),
-      rotationSpeed: random(-0.5, 0.5)
+      flowSpeed: random(0.2, 0.8),
+      rotationSpeed: random(-0.3, 0.3)
     });
   }
 }
@@ -164,21 +212,21 @@ function generateFlowingLines() {
 function generateParticles() {
   state.particles = [];
   
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 80; i++) {
     let angle = random(TWO_PI);
-    let radius = random(100 * state.scale, 400 * state.scale);
+    let radius = random(80 * state.scale, 350 * state.scale);
     
     let colorIndex = floor(random(state.colorPalette.length));
     
     state.particles.push({
       x: state.centerX + cos(angle) * radius,
       y: state.centerY + sin(angle) * radius,
-      vx: random(-0.5, 0.5),
-      vy: random(-0.5, 0.5),
+      vx: random(-0.3, 0.3),
+      vy: random(-0.3, 0.3),
       life: 1.0,
-      maxLife: random(200, 400),
-      currentLife: random(50, 200),
-      size: random(1, 3) * state.scale,
+      maxLife: random(150, 300),
+      currentLife: random(30, 150),
+      size: random(0.8, 2.5) * state.scale,
       color: state.colorPalette[colorIndex],
       trail: []
     });
@@ -186,7 +234,7 @@ function generateParticles() {
 }
 
 function draw() {
-  background(8, 12, 18, 0.08);
+  background(8, 12, 18, 0.1);
   
   state.time += state.animationSpeed;
   
@@ -195,7 +243,7 @@ function draw() {
     let orbitX = cos(state.time * node.orbitSpeed + node.phase) * node.orbitRadius;
     let orbitY = sin(state.time * node.orbitSpeed + node.phase) * node.orbitRadius;
     
-    let breathe = sin(state.time * 2 + node.pulsePhase) * 3;
+    let breathe = sin(state.time * 1.5 + node.pulsePhase) * 2;
     
     node.x = node.originalX + orbitX;
     node.y = node.originalY + orbitY + breathe;
@@ -205,7 +253,7 @@ function draw() {
   blendMode(ADD);
   state.flowingLines.forEach(line => {
     if (line.type === 'radial') {
-      let segments = 50;
+      let segments = 40;
       let flowOffset = state.time * line.flowSpeed + line.phase;
       
       for (let i = 0; i < segments - 1; i++) {
@@ -224,33 +272,33 @@ function draw() {
         let x2 = state.centerX + cos(line.angle) * (r2 + wave2);
         let y2 = state.centerY + sin(line.angle) * (r2 + wave2);
         
-        let alpha = map(t1, 0, 1, 0.6, 0.1) * (0.5 + sin(flowOffset + t1 * PI) * 0.5);
+        let alpha = map(t1, 0, 1, 0.5, 0.08) * (0.6 + sin(flowOffset + t1 * PI) * 0.4);
         
         stroke(line.color.h, line.color.s, line.color.b, alpha);
-        strokeWeight(map(t1, 0, 1, 2 * state.scale, 0.5 * state.scale));
+        strokeWeight(map(t1, 0, 1, 1.8 * state.scale, 0.3 * state.scale));
         line(x1, y1, x2, y2);
       }
     }
     
     if (line.type === 'spiral') {
       noFill();
-      let segments = 100;
+      let segments = 80;
       let rotationOffset = state.time * line.rotationSpeed;
       
       beginShape();
       for (let i = 0; i < segments; i++) {
         let t = map(i, 0, segments - 1, 0, 1);
-        let spiralAngle = t * 6 * PI + line.phase + rotationOffset;
+        let spiralAngle = t * 5 * PI + line.phase + rotationOffset;
         let radius = t * line.maxRadius;
         
-        let flowWave = sin(state.time * line.flowSpeed + t * 8) * 20 * state.scale;
+        let flowWave = sin(state.time * line.flowSpeed + t * 6) * 15 * state.scale;
         
         let x = state.centerX + cos(spiralAngle) * (radius + flowWave);
         let y = state.centerY + sin(spiralAngle) * (radius + flowWave);
         
-        let alpha = map(t, 0, 1, 0.7, 0.1) * (0.7 + sin(state.time + t * PI) * 0.3);
+        let alpha = map(t, 0, 1, 0.6, 0.08) * (0.6 + sin(state.time + t * PI) * 0.4);
         stroke(line.color.h, line.color.s, line.color.b, alpha);
-        strokeWeight(map(t, 0, 1, 1.5 * state.scale, 0.3 * state.scale));
+        strokeWeight(map(t, 0, 1, 1.2 * state.scale, 0.2 * state.scale));
         
         vertex(x, y);
       }
@@ -262,9 +310,9 @@ function draw() {
   for (let i = 0; i < state.nodes.length; i++) {
     for (let j = i + 1; j < state.nodes.length; j++) {
       let d = dist(state.nodes[i].x, state.nodes[i].y, state.nodes[j].x, state.nodes[j].y);
-      if (d < 120 * state.scale) {
-        let alpha = map(d, 0, 120 * state.scale, 0.4, 0.05);
-        alpha *= (0.5 + sin(state.time + i + j) * 0.5);
+      if (d < 100 * state.scale) {
+        let alpha = map(d, 0, 100 * state.scale, 0.3, 0.03);
+        alpha *= (0.4 + sin(state.time + i + j) * 0.4);
         
         // Blend colors
         let h = lerp(state.nodes[i].color.h, state.nodes[j].color.h, 0.5);
@@ -272,12 +320,12 @@ function draw() {
         let b = lerp(state.nodes[i].color.b, state.nodes[j].color.b, 0.5);
         
         stroke(h, s, b, alpha);
-        strokeWeight(map(d, 0, 120 * state.scale, 1.5 * state.scale, 0.2 * state.scale));
+        strokeWeight(map(d, 0, 100 * state.scale, 1.2 * state.scale, 0.15 * state.scale));
         
         // Add curve to connections
         let midX = (state.nodes[i].x + state.nodes[j].x) / 2;
         let midY = (state.nodes[i].y + state.nodes[j].y) / 2;
-        let curve = sin(state.time + i * 0.1) * 10;
+        let curve = sin(state.time + i * 0.1) * 8;
         
         noFill();
         beginShape();
@@ -294,7 +342,7 @@ function draw() {
     if (particle.currentLife <= 0) {
       // Respawn particle
       let angle = random(TWO_PI);
-      let radius = random(100 * state.scale, 400 * state.scale);
+      let radius = random(80 * state.scale, 350 * state.scale);
       particle.x = state.centerX + cos(angle) * radius;
       particle.y = state.centerY + sin(angle) * radius;
       particle.currentLife = particle.maxLife;
@@ -303,19 +351,19 @@ function draw() {
     
     // Add to trail
     particle.trail.push({x: particle.x, y: particle.y});
-    if (particle.trail.length > 8) {
+    if (particle.trail.length > 6) {
       particle.trail.splice(0, 1);
     }
     
     // Move particle
-    particle.x += particle.vx + sin(state.time + particle.x * 0.01) * 0.5;
-    particle.y += particle.vy + cos(state.time + particle.y * 0.01) * 0.3;
+    particle.x += particle.vx + sin(state.time + particle.x * 0.008) * 0.4;
+    particle.y += particle.vy + cos(state.time + particle.y * 0.008) * 0.25;
     
     // Draw trail
     for (let i = 0; i < particle.trail.length - 1; i++) {
-      let alpha = map(i, 0, particle.trail.length - 1, 0.1, 0.5);
+      let alpha = map(i, 0, particle.trail.length - 1, 0.08, 0.4);
       stroke(particle.color.h, particle.color.s, particle.color.b, alpha);
-      strokeWeight(map(i, 0, particle.trail.length - 1, 0.5, 1.5) * state.scale);
+      strokeWeight(map(i, 0, particle.trail.length - 1, 0.3, 1.2) * state.scale);
       line(particle.trail[i].x, particle.trail[i].y, 
            particle.trail[i + 1].x, particle.trail[i + 1].y);
     }
@@ -324,23 +372,23 @@ function draw() {
   // Draw nodes with halos
   blendMode(BLEND);
   state.nodes.forEach(node => {
-    let pulseSize = 1 + sin(state.time * 3 + node.pulsePhase) * 0.3;
+    let pulseSize = 1 + sin(state.time * 2.5 + node.pulsePhase) * 0.25;
     
     // Draw halo
     for (let i = 3; i > 0; i--) {
-      let alpha = map(i, 0, 3, 0, 0.4) * pulseSize;
+      let alpha = map(i, 0, 3, 0, 0.35) * pulseSize;
       fill(node.color.h, node.color.s * 0.7, node.color.b, alpha);
       noStroke();
-      circle(node.x, node.y, node.size * i * 2.5);
+      circle(node.x, node.y, node.size * i * 2.2);
     }
     
     // Draw core
-    fill(node.color.h, node.color.s, node.color.b, 0.9);
+    fill(node.color.h, node.color.s, node.color.b, 0.85);
     circle(node.x, node.y, node.size * pulseSize);
     
     // Draw inner glow
-    fill(node.color.h, node.color.s * 0.5, 100, 0.6);
-    circle(node.x, node.y, node.size * 0.6 * pulseSize);
+    fill(node.color.h, node.color.s * 0.4, 100, 0.5);
+    circle(node.x, node.y, node.size * 0.5 * pulseSize);
   });
 }
 
