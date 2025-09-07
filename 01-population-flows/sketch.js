@@ -9,46 +9,66 @@ const state = {
   connections: [],
   centerX: 0,
   centerY: 0,
-  scale: 1
+  scale: 1,
+  dataLoaded: false
 };
 
 function preload() {
-  // Try to load CSV, create synthetic data if it fails
-  try {
-    loadTable('Dubai2.csv', 'csv', 'header', (table) => {
-      if (table && table.rows && table.rows.length > 0) {
-        for (let row of table.rows) {
-          let pop = parseInt(row.get('Population'));
-          let area = parseFloat(row.get('Area'));
-          if (!isNaN(pop) && !isNaN(area)) {
-            state.communityData.push({
-              population: pop,
-              area: area
-            });
-          }
+  // Load the actual CSV data
+  loadTable('Dubai2.csv', 'csv', 'header', (table) => {
+    if (table && table.rows && table.rows.length > 0) {
+      console.log(`Loading ${table.rows.length} community records`);
+      
+      for (let row of table.rows) {
+        let code = row.get('Code');
+        let pop = parseInt(row.get('Population'));
+        let area = parseFloat(row.get('Area'));
+        
+        if (!isNaN(pop) && !isNaN(area) && code) {
+          state.communityData.push({
+            code: code,
+            population: pop,
+            area: area
+          });
         }
       }
-      if (state.communityData.length === 0) {
-        generateSyntheticData();
+      
+      if (state.communityData.length > 0) {
+        calculateStats();
+        state.dataLoaded = true;
+        console.log(`Loaded ${state.communityData.length} communities`);
+        console.log(`Population range: ${state.minPop} to ${state.maxPop}`);
+        console.log(`Area range: ${state.minArea} to ${state.maxArea}`);
+        
+        // Redraw with real data
+        if (typeof setup === 'function') {
+          redraw();
+        }
       }
-      calculateStats();
-    }, () => {
+    }
+    
+    if (!state.dataLoaded) {
+      console.log('No valid data found, creating synthetic data');
       generateSyntheticData();
-      calculateStats();
-    });
-  } catch(e) {
+    }
+  }, () => {
+    console.log('CSV load failed, creating synthetic data');
     generateSyntheticData();
-    calculateStats();
-  }
+  });
 }
 
 function generateSyntheticData() {
-  for (let i = 0; i < 60; i++) {
+  // Create realistic synthetic community data
+  for (let i = 0; i < 50; i++) {
+    let code = 100 + i;
     state.communityData.push({
-      population: Math.floor(random(1000, 50000)),
-      area: random(10, 500)
+      code: code.toString(),
+      population: Math.floor(random(100, 55000)), // Based on real data range
+      area: random(0.05, 100) // Based on real data range
     });
   }
+  calculateStats();
+  state.dataLoaded = true;
 }
 
 function calculateStats() {
@@ -65,149 +85,158 @@ function setup() {
   
   state.centerX = width / 2;
   state.centerY = height / 2;
-  state.scale = min(width, height) / 1000;
+  state.scale = min(width, height) / 1200;
   
-  // Ensure we have data
-  if (state.communityData.length === 0) {
+  background(15, 15, 15); // Dark background
+  
+  // Wait for data or use synthetic
+  if (!state.dataLoaded && state.communityData.length === 0) {
     generateSyntheticData();
-    calculateStats();
   }
   
-  background(25, 25, 25);
-  
-  generateNodes();
-  generateConnections();
-  drawArtwork();
-  
-  noLoop(); // Static artwork, no animation
+  generateVisualization();
+  noLoop(); // Static artwork
 }
 
-function generateNodes() {
+function generateVisualization() {
   state.nodes = [];
+  state.connections = [];
   
-  // Create spiral distribution of main nodes
-  for (let i = 0; i < state.communityData.length; i++) {
-    let angle = map(i, 0, state.communityData.length, 0, 8 * PI);
-    let radius = map(i, 0, state.communityData.length, 50 * state.scale, 400 * state.scale);
+  console.log(`Visualizing ${state.communityData.length} communities`);
+  
+  // Sort communities by population for better visual layering
+  let sortedData = [...state.communityData].sort((a, b) => b.population - a.population);
+  
+  // Create nodes representing each community
+  for (let i = 0; i < sortedData.length; i++) {
+    let community = sortedData[i];
     
-    let x = state.centerX + cos(angle) * radius;
-    let y = state.centerY + sin(angle) * radius;
+    // Position based on community code (spatial grouping)
+    let codeNum = parseInt(community.code) || (100 + i);
+    let codeAngle = map(codeNum % 100, 0, 99, 0, TWO_PI * 3); // Multiple spirals
+    let codeRadius = map(Math.floor(codeNum / 100), 1, 10, 80, 300) * state.scale;
     
-    let population = state.communityData[i].population;
-    let area = state.communityData[i].area;
+    // Add some variation for organic feel
+    let angleOffset = map(i, 0, sortedData.length, 0, PI) + random(-0.3, 0.3);
+    let radiusOffset = random(-30, 30) * state.scale;
     
-    let nodeSize = map(population, state.minPop, state.maxPop, 2 * state.scale, 12 * state.scale);
-    let colorIntensity = map(area, state.minArea, state.maxArea, 0.3, 1.0);
+    let x = state.centerX + cos(codeAngle + angleOffset) * (codeRadius + radiusOffset);
+    let y = state.centerY + sin(codeAngle + angleOffset) * (codeRadius + radiusOffset);
+    
+    // Node size represents POPULATION (larger = more people)
+    let nodeSize = map(community.population, state.minPop, state.maxPop, 3 * state.scale, 25 * state.scale);
+    
+    // Color intensity represents AREA (brighter = larger area)
+    let areaRatio = map(community.area, state.minArea, state.maxArea, 0.2, 1.0);
+    
+    // Population density affects color hue
+    let density = community.population / (community.area + 0.01); // Avoid division by zero
+    let maxDensity = Math.max(...state.communityData.map(d => d.population / (d.area + 0.01)));
+    let densityRatio = map(density, 0, maxDensity, 0, 1);
     
     state.nodes.push({
       x: x,
       y: y,
       size: nodeSize,
-      intensity: colorIntensity,
-      isMain: true
+      community: community,
+      areaIntensity: areaRatio,
+      densityRatio: densityRatio,
+      isMainCommunity: true
     });
   }
   
-  // Add secondary nodes
-  for (let i = 0; i < 100; i++) {
-    let angle = random(TWO_PI);
-    let radius = random(80 * state.scale, 350 * state.scale);
-    
-    let x = state.centerX + cos(angle) * radius;
-    let y = state.centerY + sin(angle) * radius;
-    
-    state.nodes.push({
-      x: x,
-      y: y,
-      size: random(1 * state.scale, 4 * state.scale),
-      intensity: random(0.2, 0.6),
-      isMain: false
-    });
-  }
-}
-
-function generateConnections() {
-  state.connections = [];
-  
-  // Create connections between nearby nodes
+  // Create connections between communities with similar characteristics
   for (let i = 0; i < state.nodes.length; i++) {
     for (let j = i + 1; j < state.nodes.length; j++) {
-      let d = dist(state.nodes[i].x, state.nodes[i].y, state.nodes[j].x, state.nodes[j].y);
+      let nodeA = state.nodes[i];
+      let nodeB = state.nodes[j];
       
-      if (d < 120 * state.scale) {
-        let alpha = map(d, 0, 120 * state.scale, 0.6, 0.1);
-        let weight = map(d, 0, 120 * state.scale, 2 * state.scale, 0.3 * state.scale);
+      let distance = dist(nodeA.x, nodeA.y, nodeB.x, nodeB.y);
+      let maxConnectionDist = 150 * state.scale;
+      
+      if (distance < maxConnectionDist) {
+        // Connection strength based on similarity in population density
+        let densityDiff = abs(nodeA.densityRatio - nodeB.densityRatio);
+        let similarity = 1 - densityDiff;
         
-        state.connections.push({
-          from: i,
-          to: j,
-          alpha: alpha,
-          weight: weight
-        });
+        if (similarity > 0.3) { // Only connect similar communities
+          let alpha = map(distance, 0, maxConnectionDist, 0.6, 0.1) * similarity;
+          let weight = map(distance, 0, maxConnectionDist, 1.5 * state.scale, 0.2 * state.scale);
+          
+          state.connections.push({
+            from: i,
+            to: j,
+            alpha: alpha,
+            weight: weight,
+            similarity: similarity
+          });
+        }
       }
     }
   }
   
-  // Create radial lines
-  for (let i = 0; i < 72; i++) {
-    let angle = map(i, 0, 72, 0, TWO_PI);
-    let innerRadius = 40 * state.scale;
-    let outerRadius = 450 * state.scale;
-    
-    state.connections.push({
-      type: 'radial',
-      angle: angle,
-      innerRadius: innerRadius,
-      outerRadius: outerRadius,
-      alpha: random(0.1, 0.4)
-    });
-  }
+  drawVisualization();
 }
 
-function drawArtwork() {
-  // Draw radial lines
-  stroke(100, 150, 200, 60);
+function drawVisualization() {
+  // Draw title and legend
+  fill(200);
+  textAlign(LEFT);
+  textSize(16 * state.scale);
+  text("Population Flows", 20, 30);
+  
+  textSize(12 * state.scale);
+  fill(150);
+  text("Node size = Population • Color intensity = Area • Connections = Similar density", 20, 50);
+  
+  // Draw connections between similar communities
   for (let connection of state.connections) {
-    if (connection.type === 'radial') {
-      strokeWeight(0.5 * state.scale);
-      stroke(100, 150, 200, connection.alpha * 255);
-      
-      let x1 = state.centerX + cos(connection.angle) * connection.innerRadius;
-      let y1 = state.centerY + sin(connection.angle) * connection.innerRadius;
-      let x2 = state.centerX + cos(connection.angle) * connection.outerRadius;
-      let y2 = state.centerY + sin(connection.angle) * connection.outerRadius;
-      
-      line(x1, y1, x2, y2);
-    }
+    let nodeA = state.nodes[connection.from];
+    let nodeB = state.nodes[connection.to];
+    
+    // Color based on average density of connected communities
+    let avgDensity = (nodeA.densityRatio + nodeB.densityRatio) / 2;
+    let r = map(avgDensity, 0, 1, 80, 255);
+    let g = map(avgDensity, 0, 1, 120, 200);
+    let b = map(avgDensity, 0, 1, 200, 100);
+    
+    stroke(r, g, b, connection.alpha * 255);
+    strokeWeight(connection.weight);
+    line(nodeA.x, nodeA.y, nodeB.x, nodeB.y);
   }
   
-  // Draw node connections
-  for (let connection of state.connections) {
-    if (!connection.type) {
-      let nodeA = state.nodes[connection.from];
-      let nodeB = state.nodes[connection.to];
-      
-      stroke(150, 200, 255, connection.alpha * 255);
-      strokeWeight(connection.weight);
-      line(nodeA.x, nodeA.y, nodeB.x, nodeB.y);
-    }
-  }
-  
-  // Draw nodes
+  // Draw community nodes
   noStroke();
   for (let node of state.nodes) {
-    if (node.isMain) {
-      // Main nodes - larger with glow
-      fill(200, 220, 255, node.intensity * 255);
-      circle(node.x, node.y, node.size);
-      
-      // Inner glow
-      fill(255, 255, 255, node.intensity * 150);
-      circle(node.x, node.y, node.size * 0.6);
-    } else {
-      // Secondary nodes
-      fill(150, 180, 220, node.intensity * 200);
-      circle(node.x, node.y, node.size);
+    let community = node.community;
+    
+    // Color based on population density
+    let r = map(node.densityRatio, 0, 1, 100, 255);
+    let g = map(node.densityRatio, 0, 1, 150, 220);
+    let b = map(node.densityRatio, 0, 1, 255, 120);
+    
+    // Outer glow (represents area)
+    let glowSize = node.size * (1 + node.areaIntensity);
+    fill(r, g, b, node.areaIntensity * 60);
+    circle(node.x, node.y, glowSize);
+    
+    // Main node (represents population)
+    fill(r, g, b, 200);
+    circle(node.x, node.y, node.size);
+    
+    // Inner core (high density communities get bright center)
+    if (node.densityRatio > 0.7) {
+      fill(255, 255, 255, 180);
+      circle(node.x, node.y, node.size * 0.4);
+    }
+    
+    // Label large communities
+    if (community.population > state.maxPop * 0.3) {
+      fill(255, 200);
+      textAlign(CENTER);
+      textSize(8 * state.scale);
+      text(community.code, node.x, node.y - node.size/2 - 5);
+      text(nf(community.population), node.x, node.y + node.size/2 + 15);
     }
   }
 }
@@ -217,13 +246,17 @@ function windowResized() {
   
   state.centerX = width / 2;
   state.centerY = height / 2;
-  state.scale = min(width, height) / 1000;
+  state.scale = min(width, height) / 1200;
   
-  state.nodes = [];
-  state.connections = [];
-  
-  background(25, 25, 25);
-  generateNodes();
-  generateConnections();
-  drawArtwork();
+  background(15, 15, 15);
+  generateVisualization();
+}
+
+function draw() {
+  // Only redraw if data was loaded asynchronously
+  if (state.dataLoaded && frameCount === 1) {
+    background(15, 15, 15);
+    generateVisualization();
+    noLoop();
+  }
 }
