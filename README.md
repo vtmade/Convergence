@@ -1,8 +1,10 @@
 # Hanami
 
-Code becomes canvas, data transforms into visual language. In the tradition of computational artists like Casey Reas and Ben Fry, who pioneered the merger of programming and visual expression, this work continues the exploration of algorithmic aesthetics. Drawing inspiration from the organic complexity found in Zach Lieberman's interactive installations and the data-driven narratives of Jer Thorp's visualizations, these pieces seek to find beauty in the mathematical structures underlying human experience.
+*by Vinay Thakur*
 
-The work resonates with the philosophy of generative art pioneers like Vera Molnár and Manfred Mohr, who understood that constraints and systematic processes could yield unexpected beauty. Each algorithm becomes a lens through which raw information reveals hidden patterns, transforming the mundane mechanics of data into something approaching the sublime. The computer serves not as mere tool but as collaborator, offering its own logic to the creative process.
+Code becomes canvas, data transforms into visual language. This work explores the merger of programming and visual expression, continuing the tradition of algorithmic aesthetics. Drawing inspiration from organic complexity and data-driven narratives, these pieces seek to find beauty in the mathematical structures underlying human experience.
+
+The work embraces the philosophy that constraints and systematic processes can yield unexpected beauty. Each algorithm becomes a lens through which raw information reveals hidden patterns, transforming the mundane mechanics of data into something approaching the sublime. The computer serves not as mere tool but as collaborator, offering its own logic to the creative process.
 
 ## Works
 
