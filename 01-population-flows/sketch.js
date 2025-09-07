@@ -85,7 +85,7 @@ function setup() {
   
   state.centerX = width / 2;
   state.centerY = height / 2;
-  state.scale = min(width, height) / 1200;
+  state.scale = min(width, height) / 800; // 50% bigger
   
   background(15, 15, 15); // Dark background
   
@@ -124,7 +124,7 @@ function generateVisualization() {
     let y = state.centerY + sin(codeAngle + angleOffset) * (codeRadius + radiusOffset);
     
     // Node size represents POPULATION (larger = more people)
-    let nodeSize = map(community.population, state.minPop, state.maxPop, 3 * state.scale, 25 * state.scale);
+    let nodeSize = map(community.population, state.minPop, state.maxPop, 4.5 * state.scale, 37.5 * state.scale);
     
     // Color intensity represents AREA (brighter = larger area)
     let areaRatio = map(community.area, state.minArea, state.maxArea, 0.2, 1.0);
@@ -230,14 +230,7 @@ function drawVisualization() {
       circle(node.x, node.y, node.size * 0.4);
     }
     
-    // Label large communities
-    if (community.population > state.maxPop * 0.3) {
-      fill(255, 200);
-      textAlign(CENTER);
-      textSize(8 * state.scale);
-      text(community.code, node.x, node.y - node.size/2 - 5);
-      text(nf(community.population), node.x, node.y + node.size/2 + 15);
-    }
+    // No text labels on nodes
   }
 }
 
@@ -246,7 +239,7 @@ function windowResized() {
   
   state.centerX = width / 2;
   state.centerY = height / 2;
-  state.scale = min(width, height) / 1200;
+  state.scale = min(width, height) / 800; // 50% bigger
   
   background(15, 15, 15);
   generateVisualization();
