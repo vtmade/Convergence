@@ -15,6 +15,20 @@
             color: #333;
         }
         
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        .logo {
+            flex-shrink: 0;
+        }
+        
+        .title-section {
+            flex: 1;
+        }
+        
         h1 {
             font-size: 2.5rem;
             font-weight: 300;
@@ -100,9 +114,16 @@
 </head>
 <body>
     <header>
-        <h1>Hanami</h1>
-        <p class="subtitle">Generative code art exploring data as aesthetic medium</p>
-        <p class="artist">by Vinay Thakur</p>
+        <div class="header-content">
+            <div class="logo">
+                <canvas id="logoCanvas" width="80" height="80"></canvas>
+            </div>
+            <div class="title-section">
+                <h1>Hanami</h1>
+                <p class="subtitle">Generative code art exploring data as aesthetic medium</p>
+                <p class="artist">by Vinay Thakur</p>
+            </div>
+        </div>
     </header>
     
     <section class="statement">
@@ -122,5 +143,73 @@
     <footer>
         <p><em>Each piece emerges from the intersection of data and algorithm, where information becomes visual poetry.</em></p>
     </footer>
+    
+    <script>
+        // Create small generative art logo
+        const canvas = document.getElementById('logoCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        function drawLogo() {
+            ctx.clearRect(0, 0, 80, 80);
+            
+            // Background
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, 80, 80);
+            
+            const centerX = 40;
+            const centerY = 40;
+            
+            // Draw small network nodes
+            const nodes = [];
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const radius = 15 + Math.sin(Date.now() * 0.001 + i) * 5;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                nodes.push({ x, y, angle: i });
+            }
+            
+            // Draw connections
+            ctx.strokeStyle = 'rgba(200, 200, 255, 0.4)';
+            ctx.lineWidth = 0.8;
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dist = Math.sqrt(Math.pow(nodes[i].x - nodes[j].x, 2) + Math.pow(nodes[i].y - nodes[j].y, 2));
+                    if (dist < 35) {
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Draw nodes
+            nodes.forEach((node, i) => {
+                const pulse = 0.8 + Math.sin(Date.now() * 0.002 + i * 0.5) * 0.3;
+                const size = 2 + pulse;
+                
+                // Outer glow
+                ctx.fillStyle = `rgba(180, 200, 255, ${0.3 * pulse})`;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, size * 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Core
+                ctx.fillStyle = `rgba(200, 220, 255, ${0.9 * pulse})`;
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        // Animate the logo
+        function animateLogo() {
+            drawLogo();
+            requestAnimationFrame(animateLogo);
+        }
+        
+        animateLogo();
+    </script>
 </body>
 </html>
