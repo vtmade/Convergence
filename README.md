@@ -20,7 +20,17 @@ Ten thousand decimal places of π transformed into a visual constellation, where
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This work is licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](https://creativecommons.org/licenses/by-nc-nd/4.0/).
+
+**What this means:**
+- ✅ You can view and share the source code for learning
+- ✅ Educational use and inspiration are encouraged  
+- ❌ No commercial use without permission
+- ❌ No derivative works or modifications
+- ❌ Cannot use "Vinay Thakur" or "Hanami" branding
+- ❌ Cannot claim authorship or present as your own work
+
+See [LICENSE](LICENSE) file for full details.
 
 ## Source Code
 
