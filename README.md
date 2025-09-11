@@ -18,6 +18,13 @@ Demographic patterns emerge as organic networks, each node representing a distin
 
 Ten thousand decimal places of π transformed into a visual constellation, where each digit becomes a colored point of light. Adjacent identical digits connect to form intricate patterns, revealing the hidden structure within mathematical infinity.
 
+### 03. Networking Spiral
+*Professional connections as temporal mandala*
+
+Seventeen years of LinkedIn networking data spirals outward from center to edge, each daily segment colored by connection activity. Time flows in concentric rings where career transitions appear as color shifts, revealing the hidden rhythms of professional relationship building through mathematical transformation of mundane CSV exports.
+
+![LinkedIn Networking Spiral](linkedin-spiral-visualization.png)
+
 ## License
 
 This work is licensed under [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](https://creativecommons.org/licenses/by-nc-nd/4.0/).
